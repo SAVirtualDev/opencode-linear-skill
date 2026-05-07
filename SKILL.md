@@ -31,7 +31,7 @@ When the user asks to add something to Linear:
      - **Context**: why this is needed (1-2 sentences)
      - **Requirements**: bullet list of what needs to happen
      - **Acceptance Criteria**: how to verify it's done
-   - `priority`: infer from urgency (1=urgent, 2=high, 3=medium, 4=low). Default to 3 if unclear.
+   - `priority`: infer from urgency (1=urgent, 2=high, 3=medium, 4=low). Default to 4 (low) if unclear.
    - `teamId`: look up the SA team ID using available tools
    - `assigneeId`: read from `~/.config/opencode/.linear-skill.env` (`LINEAR_DEFAULT_ASSIGNEE_ID`). If unset, leave unassigned.
 
@@ -54,6 +54,16 @@ When you complete a task that has an associated Linear issue:
 If the user asks about existing Linear issues:
 - Use search/filter tools to find issues
 - Present results concisely (ID, title, status, assignee)
+
+## Workflow: List Open Issues by Project
+
+When the user asks to see open issues for a project (e.g. "show me open issues for ArchAngel"):
+
+1. **Find the project** — list projects and match by name
+2. **Query open issues** for that project using the Linear API (filter by project ID and non-completed workflow states)
+3. **Present results** as a table:
+   | ID | Title | Priority | Status | Assignee |
+4. Include total count of open issues
 
 ## Tool Reference
 
