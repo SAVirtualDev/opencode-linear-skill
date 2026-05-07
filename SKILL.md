@@ -18,6 +18,7 @@ Do NOT auto-create issues. Only create when explicitly requested.
 ## Default Context
 
 - **Team**: SA
+- **Default assignee**: read from `~/.config/opencode/.linear-skill.env` (see `LINEAR_DEFAULT_ASSIGNEE_ID`)
 - Use the `linear_mcp` tools provided by the `linear` MCP server
 
 ## Workflow: Creating an Issue
@@ -32,6 +33,7 @@ When the user asks to add something to Linear:
      - **Acceptance Criteria**: how to verify it's done
    - `priority`: infer from urgency (1=urgent, 2=high, 3=medium, 4=low). Default to 3 if unclear.
    - `teamId`: look up the SA team ID using available tools
+   - `assigneeId`: read from `~/.config/opencode/.linear-skill.env` (`LINEAR_DEFAULT_ASSIGNEE_ID`). If unset, leave unassigned.
 
 2. **Create the issue** using the Linear MCP tools (e.g. `create_issue` or `linear_create_issue`)
 

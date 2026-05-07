@@ -51,7 +51,24 @@ Or symlink from your clone:
 ln -s "$(pwd)/SKILL.md" ~/.config/opencode/skills/linear/SKILL.md
 ```
 
-### 4. Restart OpenCode
+### 4. Configure defaults (optional)
+
+Create `~/.config/opencode/.linear-skill.env`:
+
+```bash
+# Your Linear user ID (find it via the API)
+LINEAR_DEFAULT_ASSIGNEE_ID=your_user_id_here
+```
+
+To find your user ID:
+```bash
+curl https://api.linear.app/graphql \
+  -H "Authorization: YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"{ users { nodes { id name } } }"}'
+```
+
+### 5. Restart OpenCode
 
 The skill and MCP server will be available in all projects.
 
