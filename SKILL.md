@@ -13,7 +13,9 @@ Whenever you know (from context) that a task relates to a Linear issue — wheth
    ```bash
    python3 linear_api.py get-issue <issue_id>
    ```
-2. **Update status to "In Progress"** when you start working:
+2. **Set status to "In Progress"** — do this whenever you start working on an issue:
+   - If you just created the issue and are starting work immediately, set it right after creation
+   - If you're picking up an existing issue, set it before writing any code
    ```bash
    python3 linear_api.py update-issue <issue_id> stateId=<in_progress_state_id>
    ```
@@ -21,7 +23,7 @@ Whenever you know (from context) that a task relates to a Linear issue — wheth
    ```bash
    python3 linear_api.py add-comment <issue_id> "<what was done, files changed, how tested>"
    ```
-4. **Move to "Done" or "In Review"** on completion.
+4. **Never set status to "Done" or move to final state** — only the user can declare an issue done. At most, move to "In Review" if the user is reviewing, but prefer to leave status as-is and just add a progress comment.
 
 This applies even if the user didn't explicitly say "add to Linear" — if you can connect the work to an issue, do it.
 
