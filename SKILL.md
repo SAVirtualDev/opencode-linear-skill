@@ -1,9 +1,29 @@
 ---
 name: linear
-description: "Create and manage Linear issues. Use when the user says 'add to Linear', 'track in Linear', 'create Linear issue', or explicitly asks to log work in Linear. Team: SA."
+description: "Create and manage Linear issues. Use when the user says 'add to Linear', 'track in Linear', 'create Linear issue', or explicitly asks to log work in Linear. Team: SA. Also: when working on a task related to a known Linear issue, read it before work and update it during work."
 ---
 
 # Linear Issue Management
+
+## Mandatory: Read Before Work, Update During Work
+
+Whenever you know (from context) that a task relates to a Linear issue — whether the user mentioned the ID, named a project, or the work clearly maps to an existing issue — you MUST:
+
+1. **Read the issue first** — before writing any code, fetch the issue to understand its description, requirements, and acceptance criteria:
+   ```bash
+   python3 linear_api.py get-issue <issue_id>
+   ```
+2. **Update status to "In Progress"** when you start working:
+   ```bash
+   python3 linear_api.py update-issue <issue_id> stateId=<in_progress_state_id>
+   ```
+3. **Comment on progress** after significant milestones or at end of session:
+   ```bash
+   python3 linear_api.py add-comment <issue_id> "<what was done, files changed, how tested>"
+   ```
+4. **Move to "Done" or "In Review"** on completion.
+
+This applies even if the user didn't explicitly say "add to Linear" — if you can connect the work to an issue, do it.
 
 ## Trigger
 
@@ -78,6 +98,7 @@ Use `linear_api.py` (located alongside this SKILL.md) via bash:
 | `python3 linear_api.py list-projects` | List all projects |
 | `python3 linear_api.py list-users` | List all users |
 | `python3 linear_api.py list-project-issues <project_id>` | List open issues for a project |
+| `python3 linear_api.py get-issue <issue_id>` | Get full issue details + comments |
 | `python3 linear_api.py create-issue <team_id> "<title>" "<desc>" <priority> [project_id] [assignee_id]` | Create an issue |
 | `python3 linear_api.py update-issue <issue_id> field=value...` | Update issue fields |
 | `python3 linear_api.py add-comment <issue_id> "<body>"` | Add a comment |

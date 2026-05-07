@@ -195,6 +195,97 @@ def delete_issue(issue_id):
         print("✗ Failed to delete issue")
 
 
+def get_issue(issue_id):
+    q = """query($id: String!) {
+      issue(id: $id) {
+        identifier
+        title
+        description
+        priority
+        state { name }
+        assignee { name }
+        project { name }
+        labels { nodes { name } }
+        comments(first: 20) {
+          nodes { body user { name } createdAt }
+        }
+      }
+    }"""
+    result = api(q, {"id": issue_id})
+    issue = result.get("data", {}).get("issue")
+    if not issue:
+        print(f"Issue not found: {issue_id}")
+        return
+    priority_labels = {1: "Urgent", 2: "High", 3: "Medium", 4: "Low", 0: "None"}
+    print(f"{'='*60}")
+    print(f"{issue['identifier']}: {issue['title']}")
+    print(f"{'='*60}")
+    print(f"Status:   {issue['state']['name'] if issue.get('state') else 'Unknown'}")
+    print(f"Priority: {priority_labels.get(issue['priority'], str(issue['priority']))}")
+    print(f"Assignee: {issue['assignee']['name'] if issue.get('assignee') else 'Unassigned'}")
+    print(f"Project:  {issue['project']['name'] if issue.get('project') else 'None'}")
+    labels = [l["name"] for l in issue.get("labels", {}).get("nodes", [])]
+    if labels:
+        print(f"Labels:   {', '.join(labels)}")
+    print()
+    if issue.get("description"):
+        print("--- Description ---")
+        print(issue["description"])
+    comments = issue.get("comments", {}).get("nodes", [])
+    if comments:
+        print(f"\n--- Comments ({len(comments)}) ---")
+        for c in comments:
+            user = c.get("user", {}).get("name", "Unknown")
+            print(f"\n[{user}]")
+            print(c["body"])
+
+
+def get_issue(issue_id):
+    q = """query($id: String!) {
+      issue(id: $id) {
+        identifier
+        title
+        description
+        priority
+        state { name }
+        assignee { name }
+        project { name }
+        labels { nodes { name } }
+        comments(first: 20) {
+          nodes { body user { name } createdAt }
+        }
+      }
+    }"""
+    result = api(q, {"id": issue_id})
+    issue = result.get("data", {}).get("issue")
+    if not issue:
+        print(f"Issue not found: {issue_id}")
+        return
+    priority_labels = {1: "Urgent", 2: "High", 3: "Medium", 4: "Low", 0: "None"}
+    print(f"{'='*60}")
+    print(f"{issue['identifier']}: {issue['title']}")
+    print(f"{'='*60}")
+    print(f"Status:   {issue['state']['name'] if issue.get('state') else 'Unknown'}")
+    print(f"Priority: {priority_labels.get(issue['priority'], str(issue['priority']))}")
+    print(f"Assignee: {issue['assignee']['name'] if issue.get('assignee') else 'Unassigned'}")
+    print(f"Project:  {issue['project']['name'] if issue.get('project') else 'None'}")
+    labels = [l["name"] for l in issue.get("labels", {}).get("nodes", [])]
+    if labels:
+        print(f"Labels:   {', '.join(labels)}")
+    print()
+    if issue.get("description"):
+        print("--- Description ---")
+        print(issue["description"])
+    comments = issue.get("comments", {}).get("nodes", [])
+    if comments:
+        print(f"\n--- Comments ({len(comments)}) ---")
+        for c in comments:
+            user_obj = c.get("user")
+            user = user_obj.get("name", "Unknown") if user_obj else "System"
+            print(f"\n[{user}]")
+            print(c["body"])
+
+
 if __name__ == "__main__":
     cfg = load_config()
     if not cfg.get("LINEAR_API_KEY"):
@@ -237,6 +328,8 @@ if __name__ == "__main__":
         add_comment(sys.argv[2], sys.argv[3])
     elif action == "delete-issue" and len(sys.argv) >= 3:
         delete_issue(sys.argv[2])
+    elif action == "get-issue" and len(sys.argv) >= 3:
+        get_issue(sys.argv[2])
     else:
         print(f"Unknown action or missing args: {action}")
         print(__doc__)
