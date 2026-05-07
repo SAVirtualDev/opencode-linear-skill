@@ -19,7 +19,7 @@ Do NOT auto-create issues. Only create when explicitly requested.
 
 - **Team**: SA
 - **Default assignee**: read from `~/.config/opencode/.linear-skill.env` (see `LINEAR_DEFAULT_ASSIGNEE_ID`)
-- Use the `linear_mcp` tools provided by the `linear` MCP server
+- **API**: use `linear_api.py` (located alongside this SKILL.md) via bash
 
 ## Workflow: Creating an Issue
 
@@ -32,12 +32,17 @@ When the user asks to add something to Linear:
      - **Requirements**: bullet list of what needs to happen
      - **Acceptance Criteria**: how to verify it's done
    - `priority`: infer from urgency (1=urgent, 2=high, 3=medium, 4=low). Default to 4 (low) if unclear.
-   - `teamId`: look up the SA team ID using available tools
+   - `teamId`: look up the SA team ID using `python3 linear_api.py list-teams`
+   - `projectId`: look up using `python3 linear_api.py list-projects` and match by name
    - `assigneeId`: read from `~/.config/opencode/.linear-skill.env` (`LINEAR_DEFAULT_ASSIGNEE_ID`). If unset, leave unassigned.
 
-2. **Create the issue** using the Linear MCP tools (e.g. `create_issue` or `linear_create_issue`)
+2. **Create the issue** using:
+   ```bash
+   python3 linear_api.py create-issue <team_id> "<title>" "<description>" <priority> <project_id> <assignee_id>
+   ```
+   The description should be a single string — use `\n` for newlines or pass it as a single-quoted multiline string.
 
-3. **Report back** — show the user the issue identifier (e.g. `SA-123`) and a link
+3. **Report back** — show the user the issue identifier (e.g. `SA-123`)
 
 ## Workflow: Updating After Completion
 
@@ -47,36 +52,39 @@ When you complete a task that has an associated Linear issue:
    - What was done (summary of changes)
    - Files modified
    - How it was tested / verified
-2. **Update status** if appropriate (move to "Done" or "In Review")
+   ```bash
+   python3 linear_api.py add-comment <issue_id> "<comment body>"
+   ```
+2. **Update status** if appropriate (move to "Done" or "In Review"):
+   ```bash
+   python3 linear_api.py update-issue <issue_id> stateId=<state_id>
+   ```
 
-## Workflow: Searching Issues
+## Workflow: Searching / Listing Issues
 
-If the user asks about existing Linear issues:
-- Use search/filter tools to find issues
-- Present results concisely (ID, title, status, assignee)
+If the user asks about existing Linear issues or wants to see open issues for a project:
 
-## Workflow: List Open Issues by Project
-
-When the user asks to see open issues for a project (e.g. "show me open issues for ArchAngel"):
-
-1. **Find the project** — list projects and match by name
-2. **Query open issues** for that project using the Linear API (filter by project ID and non-completed workflow states)
-3. **Present results** as a table:
-   | ID | Title | Priority | Status | Assignee |
-4. Include total count of open issues
+1. **Find the project** — `python3 linear_api.py list-projects`, match by name
+2. **List open issues** — `python3 linear_api.py list-project-issues <project_id>`
+3. **Present results** as a table with ID, title, priority, status, assignee
 
 ## Tool Reference
 
-The `linear` MCP server exposes these tools (names may vary by server version):
-- `create_issue` — create a new issue
-- `update_issue` — update fields on an existing issue
-- `search_issues` — search/filter issues
-- `get_issue` — get issue details by ID
-- `add_comment` — add a comment to an issue
-- `get_teams` — list teams (use to resolve team ID for "SA")
+Use `linear_api.py` (located alongside this SKILL.md) via bash:
+
+| Command | Purpose |
+|---------|---------|
+| `python3 linear_api.py list-teams` | List all teams |
+| `python3 linear_api.py list-projects` | List all projects |
+| `python3 linear_api.py list-users` | List all users |
+| `python3 linear_api.py list-project-issues <project_id>` | List open issues for a project |
+| `python3 linear_api.py create-issue <team_id> "<title>" "<desc>" <priority> [project_id] [assignee_id]` | Create an issue |
+| `python3 linear_api.py update-issue <issue_id> field=value...` | Update issue fields |
+| `python3 linear_api.py add-comment <issue_id> "<body>"` | Add a comment |
+| `python3 linear_api.py delete-issue <issue_id>` | Delete an issue |
 
 ## Notes
 
 - Always confirm the issue was created successfully before reporting to the user
-- If the MCP server is unavailable, inform the user and suggest restarting OpenCode
-- Never store Linear tokens in code or commit them — they live in the global OpenCode config
+- Config is read from `~/.config/opencode/.linear-skill.env` — both `LINEAR_API_KEY` and `LINEAR_DEFAULT_ASSIGNEE_ID`
+- Never store Linear tokens in code or commit them
