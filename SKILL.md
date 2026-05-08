@@ -5,33 +5,21 @@ description: "Create and manage Linear issues. Use when the user says 'add to Li
 
 # Linear Issue Management
 
+Uses the Linear MCP server via `mcp-remote` proxy (configured in `opencode.json`). All operations go through `linear_*` MCP tools.
+
+**Known bug:** OpenCode's MCP client double-dispatches `tools/call` for create operations (confirmed via mcp-remote debug log: two `[Local→Remote] tools/call` messages with different JSON-RPC IDs, 140ms apart, identical arguments). Every `linear_save_issue` without an `id` fires twice, creating duplicate issues. Updates (with `id`) are safe because the second call targets the same resource. The verify+cancel workflow below is the mandatory defense.
+
 ## Mandatory: Read Before Work, Update During Work
 
 Whenever you know (from context) that a task relates to a Linear issue — whether the user mentioned the ID, named a project, or the work clearly maps to an existing issue — you MUST:
 
-1. **Read the issue first** — before writing any code, fetch the issue to understand its description, requirements, and acceptance criteria:
-   ```bash
-   python3 linear_api.py get-issue <issue_id>
-   ```
+1. **Read the issue first** — before writing any code, fetch the issue to understand its description, requirements, and acceptance criteria.
 2. **Set status to "In Progress"** — do this whenever you start working on an issue:
    - If you just created the issue and are starting work immediately, set it right after creation
    - If you're picking up an existing issue, set it before writing any code
-   ```bash
-   python3 linear_api.py update-issue <issue_id> stateId=<in_progress_state_id>
-   ```
-3. **Comment on progress** after significant milestones or at end of session:
-   ```bash
-   python3 linear_api.py add-comment <issue_id> "<what was done, files changed, how tested>"
-   ```
+3. **Comment on progress** after significant milestones or at end of session.
 4. **Move to "In Review" when implementation is complete** — after finishing the work and the user has reviewed the summary, move the issue to "In Review" to signal it's ready for their final review. This is the expected terminal state for the AI's workflow.
-   ```bash
-   python3 linear_api.py update-issue <issue_id> stateId=<in_review_state_id>
-   ```
-5. **Only close to "Done" when explicitly asked** — the user may ask you to close a ticket. In that case, first look up the "Done" state ID using `list-states`, then update:
-   ```bash
-   python3 linear_api.py list-states <team_id>
-   python3 linear_api.py update-issue <issue_id> stateId=<done_state_id>
-   ```
+5. **Only close to "Done" when explicitly asked** — the user may ask you to close a ticket. In that case, look up the "Done" state and update.
 
 This applies even if the user didn't explicitly say "add to Linear" — if you can connect the work to an issue, do it.
 
@@ -49,36 +37,47 @@ Do NOT auto-create issues. Only create when explicitly requested.
 
 - **Team**: SA
 - **Default assignee**: read from `~/.config/opencode/.linear-skill.env` (see `LINEAR_DEFAULT_ASSIGNEE_ID`)
-- **API**: use `linear_api.py` (located alongside this SKILL.md) via bash
 
 ## Workflow: Creating an Issue
 
 When the user asks to add something to Linear:
 
-0. **Check for duplicates first** — before creating, search existing open issues for the same or similar title:
-   ```bash
-   python3 linear_api.py list-project-issues <project_id>
-   ```
-   Scan the results. If an open issue already covers the same scope, inform the user and do NOT create a duplicate. If the user confirms it's genuinely different, proceed.
+### Step 0 — Duplicate Detection (MANDATORY)
 
-1. **Gather info from context** — use the current task/conversation to populate:
-   - `title`: concise summary (imperative mood, e.g. "Add dark mode toggle to settings")
-   - `description`: markdown body with:
-     - **Context**: why this is needed (1-2 sentences)
-     - **Requirements**: bullet list of what needs to happen
-     - **Acceptance Criteria**: how to verify it's done
-   - `priority`: infer from urgency (1=urgent, 2=high, 3=medium, 4=low). Default to 4 (low) if unclear.
-   - `teamId`: look up the SA team ID using `python3 linear_api.py list-teams`
-   - `projectId`: look up using `python3 linear_api.py list-projects` and match by name
-   - `assigneeId`: read from `~/.config/opencode/.linear-skill.env` (`LINEAR_DEFAULT_ASSIGNEE_ID`). If unset, leave unassigned.
+Before creating, search for existing issues that may already cover this work:
 
-2. **Create the issue** using:
-   ```bash
-   python3 linear_api.py create-issue <team_id> "<title>" "<description>" <priority> <project_id> <assignee_id>
-   ```
-   The description should be a single string — use `\n` for newlines or pass it as a single-quoted multiline string.
+1. Search by title keywords using `linear_list_issues` with the `query` parameter
+2. Also search by project if known: `linear_list_issues` with `project` parameter
+3. Check both open AND recently completed/canceled issues
 
-3. **Report back** — show the user the issue identifier (e.g. `SA-123`)
+If a matching issue exists:
+- **Same scope, open**: inform the user and do NOT create. Link to the existing issue.
+- **Same scope, completed**: inform the user it was already done. Do NOT create.
+- **Similar but different scope**: confirm with the user before proceeding.
+
+### Step 1 — Gather Info
+
+- `title`: concise summary (imperative mood, e.g. "Add dark mode toggle to settings")
+- `description`: markdown body with:
+  - **Context**: why this is needed (1-2 sentences)
+  - **Requirements**: bullet list of what needs to happen
+  - **Acceptance Criteria**: how to verify it's done
+- `priority`: infer from urgency (1=urgent, 2=high, 3=medium, 4=low). Default to 4 (low) if unclear.
+- `team`: "SA"
+- `project`: look up using `linear_list_projects` and match by name
+- `assignee`: read from `~/.config/opencode/.linear-skill.env` (`LINEAR_DEFAULT_ASSIGNEE_ID`). If unset, leave unassigned.
+
+### Step 2 — Create
+
+Use `linear_save_issue` without an `id` parameter.
+
+### Step 3 — Verify (MANDATORY)
+
+After creating, immediately verify by searching for the exact title with `linear_list_issues`. If more than one issue exists with the same title, cancel the extras by setting state to "Canceled" via `linear_save_issue`. Keep the oldest (first created).
+
+### Step 4 — Report
+
+Show the user the surviving issue identifier (e.g. `SA-123`) and URL.
 
 ## Workflow: Updating After Completion
 
@@ -88,63 +87,46 @@ When you complete a task that has an associated Linear issue:
    - What was done (summary of changes)
    - Files modified
    - How it was tested / verified
-   ```bash
-   python3 linear_api.py add-comment <issue_id> "<comment body>"
-   ```
 2. **Move to "In Review"** — this signals the implementation is done and ready for the user to review. Do NOT move to "Done" or any final state; only the user can close an issue.
-   ```bash
-   python3 linear_api.py update-issue <issue_id> stateId=<in_review_state_id>
-   ```
 
 ## Workflow: Marking an Issue as Duplicate
 
 When an issue is identified as a duplicate of another:
 
-1. **Find the "Duplicate" state ID** — it's a `canceled`-type state, not `completed`:
-   ```bash
-   python3 linear_api.py list-states <team_id>
-   ```
-   Look for the state named "Duplicate" (type: canceled).
-
-2. **Update the issue** using `stateId=` (not `state=`):
-   ```bash
-   python3 linear_api.py update-issue <issue_id> stateId=<duplicate_state_id>
-   ```
-
-3. **Optionally add a comment** linking to the parent issue:
-   ```bash
-   python3 linear_api.py add-comment <issue_id> "Duplicate of <parent_issue_id>"
-   ```
-
-Note: The field is `stateId` (not `state`), and the value is a UUID, not a string name. Always use `list-states` to look it up.
+1. **Find the "Duplicate" state** using `linear_list_issue_statuses` — it's a `canceled`-type state
+2. **Update the issue** to the Duplicate state using `linear_save_issue`
+3. **Optionally add a comment** linking to the parent issue
 
 ## Workflow: Searching / Listing Issues
 
 If the user asks about existing Linear issues or wants to see open issues for a project:
 
-1. **Find the project** — `python3 linear_api.py list-projects`, match by name
-2. **List open issues** — `python3 linear_api.py list-project-issues <project_id>`
+1. **Find the project** using `linear_list_projects`, match by name
+2. **List open issues** using `linear_list_issues` with the project parameter
 3. **Present results** as a table with ID, title, priority, status, assignee
 
-## Tool Reference
+## Available Tools
 
-Use `linear_api.py` (located alongside this SKILL.md) via bash:
-
-| Command | Purpose |
-|---------|---------|
-| `python3 linear_api.py list-teams` | List all teams |
-| `python3 linear_api.py list-projects` | List all projects |
-| `python3 linear_api.py list-users` | List all users |
-| `python3 linear_api.py list-states <team_id>` | List workflow states (get stateId for status updates) |
-| `python3 linear_api.py list-project-issues <project_id>` | List open issues for a project |
-| `python3 linear_api.py get-issue <issue_id>` | Get full issue details + comments |
-| `python3 linear_api.py create-issue <team_id> "<title>" "<desc>" <priority> [project_id] [assignee_id]` | Create an issue |
-| `python3 linear_api.py update-issue <issue_id> field=value...` | Update issue fields |
-| `python3 linear_api.py add-comment <issue_id> "<body>"` | Add a comment |
-| `python3 linear_api.py delete-issue <issue_id>` | Delete an issue |
+| Category | Tools |
+|----------|-------|
+| Issues | `linear_get_issue`, `linear_list_issues`, `linear_save_issue` |
+| Comments | `linear_list_comments`, `linear_save_comment`, `linear_delete_comment` |
+| Projects | `linear_list_projects`, `linear_get_project`, `linear_save_project` |
+| Teams | `linear_list_teams`, `linear_get_team` |
+| Users | `linear_list_users`, `linear_get_user` |
+| Statuses | `linear_list_issue_statuses`, `linear_get_issue_status` |
+| Labels | `linear_list_issue_labels`, `linear_create_issue_label` |
+| Documents | `linear_list_documents`, `linear_get_document`, `linear_save_document` |
+| Milestones | `linear_list_milestones`, `linear_get_milestone`, `linear_save_milestone` |
+| Cycles | `linear_list_cycles` |
+| Attachments | `linear_get_attachment`, `linear_create_attachment`, `linear_delete_attachment` |
+| Diffs/Reviews | `linear_list_diffs`, `linear_get_diff`, `linear_get_diff_threads` |
+| Status Updates | `linear_get_status_updates`, `linear_save_status_update`, `linear_delete_status_update` |
 
 ## Notes
 
 - Always confirm the issue was created successfully before reporting to the user
-- Config is read from `~/.config/opencode/.linear-skill.env` — both `LINEAR_API_KEY` and `LINEAR_DEFAULT_ASSIGNEE_ID`
+- Default assignee is read from `~/.config/opencode/.linear-skill.env` (`LINEAR_DEFAULT_ASSIGNEE_ID`)
 - Never store Linear tokens in code or commit them
+- State names are case-sensitive — use exact names from `linear_list_issue_statuses`
+- No delete-issue tool — use `linear_save_issue` to set state to "Canceled" instead
