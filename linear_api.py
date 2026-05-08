@@ -8,6 +8,7 @@ Actions:
   list-projects                           List all projects
   list-users                              List all users
   list-project-issues <project_id>        List open issues for a project
+  list-states <team_id>                   List workflow states (IDs needed for stateId)
   create-issue <team_id> <title> <desc> <priority> [project_id] [assignee_id]
   update-issue <issue_id> <field=value>...   Update issue fields (title, description, priority, assigneeId, stateId)
   add-comment <issue_id> <body>           Add comment to issue
@@ -121,6 +122,26 @@ def list_project_issues(project_id):
         assignee = i["assignee"]["name"] if i.get("assignee") else "Unassigned"
         status = i["state"]["name"] if i.get("state") else "Unknown"
         print(f"{i['identifier']:<10} {pri:<8} {status:<15} {assignee:<20} {i['title']}")
+
+
+def list_states(team_id):
+    """List workflow states for a team (IDs needed for update-issue stateId=)."""
+    q = """query($teamId: String!) {
+      team(id: $teamId) {
+        name
+        states { nodes { id name type } }
+      }
+    }"""
+    result = api(q, {"teamId": team_id})
+    team = result.get("data", {}).get("team")
+    if not team:
+        print(f"Team not found: {team_id}")
+        return
+    print(f"\nWorkflow states for {team['name']}:")
+    print(f"{'State ID':<40} {'Name':<20} Type")
+    print("-" * 80)
+    for s in team["states"]["nodes"]:
+        print(f"{s['id']:<40} {s['name']:<20} {s['type']}")
 
 
 def create_issue(team_id, title, description, priority, project_id=None, assignee_id=None):
@@ -308,6 +329,8 @@ if __name__ == "__main__":
         list_users()
     elif action == "list-project-issues" and len(sys.argv) >= 3:
         list_project_issues(sys.argv[2])
+    elif action == "list-states" and len(sys.argv) >= 3:
+        list_states(sys.argv[2])
     elif action == "create-issue" and len(sys.argv) >= 5:
         team_id = sys.argv[2]
         title = sys.argv[3]
