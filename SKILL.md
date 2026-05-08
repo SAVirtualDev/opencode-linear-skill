@@ -23,7 +23,8 @@ Whenever you know (from context) that a task relates to a Linear issue — wheth
    ```bash
    python3 linear_api.py add-comment <issue_id> "<what was done, files changed, how tested>"
    ```
-4. **Never set status to "Done" or move to final state** — only the user can declare an issue done. At most, move to "In Review" if the user is reviewing, but prefer to leave status as-is and just add a progress comment.
+4. **Move to "In Review" when implementation is complete** — after finishing the work and the user has reviewed the summary, move the issue to "In Review" to signal it's ready for their final review. This is the expected terminal state for the AI's workflow.
+5. **Never set status to "Done" or any final/completed state** — only the user can declare an issue done.
 
 This applies even if the user didn't explicitly say "add to Linear" — if you can connect the work to an issue, do it.
 
@@ -77,9 +78,13 @@ When you complete a task that has an associated Linear issue:
    ```bash
    python3 linear_api.py add-comment <issue_id> "<comment body>"
    ```
-2. **Update status** if appropriate (move to "Done" or "In Review"):
+2. **Move to "In Review"** — this signals the implementation is done and ready for the user to review. Do NOT move to "Done" or any final state; only the user can close an issue.
    ```bash
-   python3 linear_api.py update-issue <issue_id> stateId=<state_id>
+   python3 linear_api.py update-issue <issue_id> stateId=<in_review_state_id>
+   ```
+2. **Move to "In Review"** — this signals the implementation is done and ready for the user to review. Do NOT move to "Done" or any final state; only the user can close an issue.
+   ```bash
+   python3 linear_api.py update-issue <issue_id> stateId=<in_review_state_id>
    ```
 
 ## Workflow: Searching / Listing Issues
