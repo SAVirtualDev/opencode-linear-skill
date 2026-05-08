@@ -55,6 +55,12 @@ Do NOT auto-create issues. Only create when explicitly requested.
 
 When the user asks to add something to Linear:
 
+0. **Check for duplicates first** — before creating, search existing open issues for the same or similar title:
+   ```bash
+   python3 linear_api.py list-project-issues <project_id>
+   ```
+   Scan the results. If an open issue already covers the same scope, inform the user and do NOT create a duplicate. If the user confirms it's genuinely different, proceed.
+
 1. **Gather info from context** — use the current task/conversation to populate:
    - `title`: concise summary (imperative mood, e.g. "Add dark mode toggle to settings")
    - `description`: markdown body with:
@@ -89,6 +95,28 @@ When you complete a task that has an associated Linear issue:
    ```bash
    python3 linear_api.py update-issue <issue_id> stateId=<in_review_state_id>
    ```
+
+## Workflow: Marking an Issue as Duplicate
+
+When an issue is identified as a duplicate of another:
+
+1. **Find the "Duplicate" state ID** — it's a `canceled`-type state, not `completed`:
+   ```bash
+   python3 linear_api.py list-states <team_id>
+   ```
+   Look for the state named "Duplicate" (type: canceled).
+
+2. **Update the issue** using `stateId=` (not `state=`):
+   ```bash
+   python3 linear_api.py update-issue <issue_id> stateId=<duplicate_state_id>
+   ```
+
+3. **Optionally add a comment** linking to the parent issue:
+   ```bash
+   python3 linear_api.py add-comment <issue_id> "Duplicate of <parent_issue_id>"
+   ```
+
+Note: The field is `stateId` (not `state`), and the value is a UUID, not a string name. Always use `list-states` to look it up.
 
 ## Workflow: Searching / Listing Issues
 
