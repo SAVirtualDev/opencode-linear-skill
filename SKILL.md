@@ -24,7 +24,14 @@ Whenever you know (from context) that a task relates to a Linear issue — wheth
    python3 linear_api.py add-comment <issue_id> "<what was done, files changed, how tested>"
    ```
 4. **Move to "In Review" when implementation is complete** — after finishing the work and the user has reviewed the summary, move the issue to "In Review" to signal it's ready for their final review. This is the expected terminal state for the AI's workflow.
-5. **Never set status to "Done" or any final/completed state** — only the user can declare an issue done.
+   ```bash
+   python3 linear_api.py update-issue <issue_id> stateId=<in_review_state_id>
+   ```
+5. **Only close to "Done" when explicitly asked** — the user may ask you to close a ticket. In that case, first look up the "Done" state ID using `list-states`, then update:
+   ```bash
+   python3 linear_api.py list-states <team_id>
+   python3 linear_api.py update-issue <issue_id> stateId=<done_state_id>
+   ```
 
 This applies even if the user didn't explicitly say "add to Linear" — if you can connect the work to an issue, do it.
 
@@ -82,10 +89,6 @@ When you complete a task that has an associated Linear issue:
    ```bash
    python3 linear_api.py update-issue <issue_id> stateId=<in_review_state_id>
    ```
-2. **Move to "In Review"** — this signals the implementation is done and ready for the user to review. Do NOT move to "Done" or any final state; only the user can close an issue.
-   ```bash
-   python3 linear_api.py update-issue <issue_id> stateId=<in_review_state_id>
-   ```
 
 ## Workflow: Searching / Listing Issues
 
@@ -104,6 +107,7 @@ Use `linear_api.py` (located alongside this SKILL.md) via bash:
 | `python3 linear_api.py list-teams` | List all teams |
 | `python3 linear_api.py list-projects` | List all projects |
 | `python3 linear_api.py list-users` | List all users |
+| `python3 linear_api.py list-states <team_id>` | List workflow states (get stateId for status updates) |
 | `python3 linear_api.py list-project-issues <project_id>` | List open issues for a project |
 | `python3 linear_api.py get-issue <issue_id>` | Get full issue details + comments |
 | `python3 linear_api.py create-issue <team_id> "<title>" "<desc>" <priority> [project_id] [assignee_id]` | Create an issue |
