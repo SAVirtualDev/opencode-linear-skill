@@ -66,10 +66,16 @@ def api(query, variables=None):
     )
     try:
         with urllib.request.urlopen(req) as resp:
-            return json.loads(resp.read())
+            result = json.loads(resp.read())
+            # Check for GraphQL-level errors (not HTTP errors)
+            if "errors" in result:
+                for err in result["errors"]:
+                    print(f"GraphQL Error: {err.get('message', 'Unknown error')}")
+                sys.exit(1)
+            return result
     except urllib.error.HTTPError as e:
         body = e.read().decode()
-        print(f"API Error {e.code}: {body}")
+        print(f"HTTP Error {e.code}: {body}")
         sys.exit(1)
 
 
