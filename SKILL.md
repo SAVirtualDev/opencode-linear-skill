@@ -37,6 +37,7 @@ Do NOT auto-create issues. Only create when explicitly requested.
 
 - **Team**: SA
 - **Default assignee**: read from `~/.config/opencode/.linear-skill.env` (see `LINEAR_DEFAULT_ASSIGNEE_ID`)
+- **Auth**: OAuth via `mcp-remote` — no API key required
 
 ## Workflow: Creating an Issue
 
