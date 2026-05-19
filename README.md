@@ -58,6 +58,53 @@ The skill uses the **Linear MCP server** (`https://mcp.linear.app/sse`) via `mcp
 
 Authentication is handled via OAuth. On first use, `mcp-remote` opens your browser to authorise the connection. The token is cached in `~/.mcp-auth/` for subsequent sessions.
 
+## Troubleshooting
+
+### OAuth tokens expired / "Cannot login to Linear"
+
+Linear OAuth tokens expire. The access token lasts ~24 hours. The refresh token also has a finite lifetime — once it expires, `mcp-remote` cannot silently refresh and must do a full interactive re-auth. However, **OpenCode redirects MCP server stderr to `/dev/null`**, so the authorization URL that `mcp-remote` prints is invisible to you. The MCP tools will appear to hang or time out.
+
+**To fix:**
+
+1. **Kill the stale mcp-remote process:**
+   ```bash
+   pkill -f "mcp-remote https://mcp.linear.app"
+   ```
+
+2. **Clear cached auth state:**
+   ```bash
+   rm -rf ~/.mcp-auth
+   ```
+
+3. **Run mcp-remote manually in your terminal** to complete the OAuth flow interactively:
+   ```bash
+   npx -y mcp-remote https://mcp.linear.app/mcp --debug
+   ```
+   This will print an authorization URL. Open it in your browser, authorize the app, and the tokens will be saved to `~/.mcp-auth/`.
+
+4. **Stop the manual process** (Ctrl+C) once you see `Authorization completed successfully` and `Proxy established successfully`.
+
+5. **Restart OpenCode** — it will spawn a fresh `mcp-remote` that picks up the saved tokens.
+
+### Why this happens
+
+- `mcp-remote` stores OAuth tokens in `~/.mcp-auth/mcp-remote-0.1.37/*_tokens.json`
+- Access tokens expire after ~24 hours; refresh tokens may also expire
+- When tokens are missing or expired, `mcp-remote` starts an OAuth callback server on port `22227` and prints an authorization URL to stderr
+- OpenCode suppresses MCP server stderr, so the URL is never shown
+- The callback server runs but nobody visits the URL → auth never completes → tools time out
+
+### Debug mode
+
+Add `--debug` to the mcp-remote command in `opencode.json` to get verbose logs written to `~/.mcp-auth/*_debug.log`:
+
+```json
+"linear": {
+  "type": "local",
+  "command": ["npx", "-y", "mcp-remote", "https://mcp.linear.app/mcp", "--debug"]
+}
+```
+
 ## License
 
 MIT License
